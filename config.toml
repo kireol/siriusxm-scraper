@@ -1,0 +1,23 @@
+# NOTE: stations are now managed on the web viewer's Stations tab and kept in
+# the `stations` table of plays.db. This list (and [siriusxm_ids] below) is only
+# used to fill that table the first time, when it is empty.
+#
+# Station slugs from xmplaylist.com URLs, e.g. https://xmplaylist.com/station/liquidmetal
+# These slugs are also the station names used in the database and reports.
+stations = [
+    "liquidmetal",
+]
+
+# Where plays.db and the CSV reports go (relative to this file).
+data_dir = "data"
+
+# Timezone used to bucket plays into days for data/daily/<date>.csv
+timezone = "America/New_York"
+
+# Optional: SiriusXM's internal channel id for each station, used for the
+# now-playing feed https://www.siriusxm.com/api/mountain/<id>.
+# The id often differs from the slug (Liquid Metal is "hardattack").
+# A wrong id is reported as "not a valid SiriusXM channel id" in the log.
+# (Keep this table last: TOML keys after a [table] header belong to it.)
+[siriusxm_ids]
+liquidmetal = "hardattack"

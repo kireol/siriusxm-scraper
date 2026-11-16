@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SXM Plays</title>
+<style>
+  :root {
+    --bg: #f6f6f4; --panel: #ffffff; --text: #1d1d1b; --muted: #6b6b66;
+    --line: #e4e4df; --accent: #b3261e; --accent-soft: #fbe9e7; --day: #efefeb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141413; --panel: #1d1d1b; --text: #ecebe6; --muted: #9a9993;
+      --line: #2f2f2c; --accent: #ef6f62; --accent-soft: #3a1f1c; --day: #252523;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  header { position: sticky; top: 0; z-index: 2; background: var(--bg);
+           border-bottom: 1px solid var(--line); }
+  .wrap { max-width: 1000px; margin: 0 auto; padding: 0 16px; }
+  .top { display: flex; align-items: baseline; justify-content: space-between;
+         gap: 12px; padding-top: 14px; flex-wrap: wrap; }
+  h1 { font-size: 18px; margin: 0; }
+  .stats { color: var(--muted); font-size: 13px; }
+  .bar { display: flex; gap: 8px; align-items: center; padding: 10px 0 0; flex-wrap: wrap; }
+  .tabs { display: flex; gap: 4px; }
+  .tab { border: 0; background: none; color: var(--muted); font: inherit; font-weight: 600;
+         padding: 8px 12px; border-bottom: 2px solid transparent; cursor: pointer; }
+  .tab[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); }
+  .count { font-weight: 400; color: var(--muted); }
+  .filters { margin-left: auto; display: flex; gap: 8px; padding-bottom: 6px; }
+  input, select { font: inherit; color: var(--text); background: var(--panel);
+                  border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; }
+  #q { width: 220px; }
+  main { padding: 12px 0 40px; }
+  table { width: 100%; border-collapse: collapse; background: var(--panel);
+          border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line);
+           vertical-align: top; }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  tr.day td { background: var(--day); font-weight: 600; font-size: 13px; }
+  th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+  th.sortable:hover { color: var(--text); }
+  th.sortable[aria-sort="ascending"], th.sortable[aria-sort="descending"] { color: var(--text); }
+  th .arrow { display: inline-block; width: 1em; color: var(--accent); }
+  td.time { white-space: nowrap; color: var(--muted); font-variant-numeric: tabular-nums; }
+  td.title { font-weight: 600; }
+  .muted { color: var(--muted); font-size: 13px; }
+  .badge { display: inline-block; font-size: 11px; font-weight: 600; color: var(--accent);
+           background: var(--accent-soft); border-radius: 4px; padding: 1px 6px;
+           margin-left: 6px; vertical-align: 1px; }
+  .vs { color: var(--muted); }
+  .more { display: block; margin: 14px auto 0; font: inherit; padding: 8px 18px;
+          border-radius: 6px; border: 1px solid var(--line); background: var(--panel);
+          color: var(--text); cursor: pointer; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+           padding: 14px 16px; margin-bottom: 14px; }
+  .panel h2 { font-size: 15px; margin: 0 0 4px; }
+  .panel p { margin: 0 0 10px; }
+  .addform { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; }
+  .addform label { display: flex; flex-direction: column; gap: 3px; font-size: 13px;
+                   color: var(--muted); }
+  .addform input { width: 200px; }
+  .btn { font: inherit; padding: 6px 14px; border-radius: 6px; cursor: pointer;
+         border: 1px solid var(--line); background: var(--panel); color: var(--text); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.danger { color: var(--accent); }
+  .btn:disabled { opacity: .5; cursor: default; }
+  .msg { margin-top: 10px; font-size: 14px; }
+  .msg.err { color: var(--accent); }
+  code { font-size: 13px; }
+  td.actions { text-align: right; white-space: nowrap; }
+  td.actions .btn + .btn { margin-left: 6px; }
+  tr.off td:not(.actions):not(.status) { opacity: .5; }
+  .switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
+            font-size: 13px; color: var(--muted); }
+  .switch input { appearance: none; width: 34px; height: 20px; border-radius: 10px;
+                  background: var(--line); position: relative; cursor: pointer; margin: 0;
+                  padding: 0; border: 0; transition: background .15s; }
+  .switch input::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px;
+                         height: 16px; border-radius: 50%; background: #fff;
+                         transition: transform .15s; box-shadow: 0 1px 2px rgba(0,0,0,.3); }
+  .switch input:checked { background: #2e7d32; }
+  .switch input:checked::after { transform: translateX(14px); }
+  .switch input:disabled { opacity: .5; cursor: default; }
+  .switch input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .empty { text-align: center; color: var(--muted); padding: 40px 0; }
+  @media (max-width: 640px) {
+    .filters { margin-left: 0; width: 100%; }
+    #q { flex: 1; width: auto; }
+    .addform label, .addform input { width: 100%; }
+    td.actions { text-align: left; padding-top: 6px; }
+    thead { display: none; }
+    table, tbody, tr, td { display: block; }
+    tr:not(.day) { padding: 8px 12px; border-bottom: 1px solid var(--line); }
+    tr:not(.day) td { border: 0; padding: 1px 0; }
+    td.hide-sm { display: none; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="top">
+      <h1>SiriusXM plays</h1>
+      <div class="stats" id="stats"></div>
+    </div>
+    <div class="bar">
+      <div class="tabs" role="tablist">
+        <button class="tab" role="tab" data-tab="plays" aria-selected="true">
+          Songs <span class="count" id="n-plays"></span></button>
+        <button class="tab" role="tab" data-tab="covers" aria-selected="false">
+          Cover songs <span class="count" id="n-covers"></span></button>
+        <button class="tab" role="tab" data-tab="stations" aria-selected="false">
+          Stations <span class="count" id="n-stations"></span></button>
+      </div>
+      <div class="filters" id="filters">
+        <select id="station" hidden></select>
+        <input id="q" type="search" placeholder="Search title or artist" autocomplete="off">
+      </div>
+    </div>
+  </div>
+</header>
+<main class="wrap" id="main"></main>
+
+<script>
+const state = { tab: "plays", q: "", station: "", rows: [], total: 0 };
+let stationNames = {};
+// Per-tab sort: clicking a column header sorts by it; clicking again flips it.
+const sorts = { plays: { key: "time", dir: "desc" }, covers: { key: "time", dir: "desc" },
+                stations: { key: "name", dir: "asc" } };
+// First click on a column: newest / biggest first for times and counts, A→Z for text.
+const DESC_FIRST = new Set(["time", "plays", "last_play", "enabled"]);
+try { Object.assign(sorts, JSON.parse(localStorage.getItem("sxm-sorts") || "{}")); } catch {}
+
+function th(key, label, cls = "") {
+  const s = sorts[state.tab];
+  const on = s.key === key;
+  const aria = on ? (s.dir === "asc" ? "ascending" : "descending") : "none";
+  return `<th class="sortable ${cls}" data-sort="${key}" aria-sort="${aria}" tabindex="0">` +
+    `${label}<span class="arrow">${on ? (s.dir === "asc" ? "▲" : "▼") : ""}</span></th>`;
+}
+
+function bindSort(rerender) {
+  document.querySelectorAll("th[data-sort]").forEach((h) => {
+    const go = () => {
+      const s = sorts[state.tab], key = h.dataset.sort;
+      if (s.key === key) s.dir = s.dir === "asc" ? "desc" : "asc";
+      else { s.key = key; s.dir = DESC_FIRST.has(key) ? "desc" : "asc"; }
+      try { localStorage.setItem("sxm-sorts", JSON.stringify(sorts)); } catch {}
+      rerender();
+    };
+    h.onclick = go;
+    h.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } };
+  });
+}
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g,
+  (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+const dayFmt = new Intl.DateTimeFormat(undefined,
+  { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+// Times arrive as local ISO strings in the configured timezone, e.g.
+// 2026-11-16T14:52:06-05:00. Show them as written, not in the viewer's zone.
+const day = (iso) => iso.slice(0, 10);
+const dayLabel = (d) => dayFmt.format(new Date(d + "T12:00:00"));
+const shortFmt = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" });
+const shortDay = (d) => shortFmt.format(new Date(d + "T12:00:00"));
+function clock(iso) {
+  let [h, m] = iso.slice(11, 16).split(":").map(Number);
+  const ap = h < 12 ? "AM" : "PM";
+  h = h % 12 || 12;
+  return `${h}:${String(m).padStart(2, "0")} ${ap}`;
+}
+
+async function api(path, params = {}) {
+  const url = new URL(path, location.href);
+  for (const [k, v] of Object.entries(params)) if (v !== "" && v != null) url.searchParams.set(k, v);
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`${r.status} ${await r.text()}`);
+  return r.json();
+}
+
+async function loadSummary() {
+  const s = await api("/api/summary");
+  $("stats").textContent = s.last ? `${s.plays} songs · last ${clock(s.last)} on ${dayLabel(day(s.last))}` : "";
+  $("n-covers").textContent = s.covers;
+  $("n-plays").textContent = s.plays;
+  $("n-stations").textContent = s.scraped;
+  stationNames = Object.fromEntries(s.stations.map((x) => [x.slug, x.name]));
+  const sel = $("station");
+  const opts = `<option value="">All stations</option>` +
+    s.stations.map((x) => `<option value="${esc(x.slug)}">${esc(x.name)}</option>`).join("");
+  if (sel.dataset.opts !== opts) {
+    sel.innerHTML = opts;
+    sel.dataset.opts = opts;
+    sel.value = s.stations.some((x) => x.slug === state.station) ? state.station : "";
+    state.station = sel.value;
+  }
+  sel.hidden = s.stations.length < 2;
+}
+
+async function load(append = false) {
+  $("filters").style.visibility = state.tab === "stations" ? "hidden" : "";
+  if (state.tab === "stations") return loadStations();
+  const params = { q: state.q, station: state.station,
+                   sort: sorts[state.tab].key, dir: sorts[state.tab].dir };
+  if (state.tab === "plays") params.offset = append ? state.rows.length : 0;
+  const data = await api(`/api/${state.tab}`, params);
+  state.rows = append ? state.rows.concat(data.rows) : data.rows;
+  state.total = data.total;
+  render();
+}
+
+function render() {
+  const multi = !$("station").hidden;
+  const { rows, tab } = state;
+  if (!rows.length) {
+    $("main").innerHTML = `<div class="empty">${state.q ? "No matches." :
+      tab === "covers" ? "No cover songs recorded yet." : "No songs recorded yet."}</div>`;
+    return;
+  }
+  const st = multi ? th("station", "Station") : "";
+  const head = tab === "plays"
+    ? `<tr>${th("time", "Time")}${th("title", "Song")}${th("artist", "Artist")}${st}${th("source", "Source", "hide-sm")}</tr>`
+    : `<tr>${th("time", "Time")}${th("title", "Song")}${th("cover", "Covered by")}${th("original", "Original artist")}${st}${th("shown", "As shown", "hide-sm")}</tr>`;
+  const cols = (tab === "plays" ? 4 : 5) + (multi ? 1 : 0);
+  // Day headings only make sense when the list is in time order; otherwise
+  // each row carries its own date.
+  const byTime = sorts[tab].key === "time";
+  const when = (iso) => byTime ? clock(iso) : `${shortDay(day(iso))}, ${clock(iso)}`;
+  let body = "", lastDay = "";
+  for (const r of rows) {
+    const d = day(r.played_at);
+    if (byTime && d !== lastDay) { body += `<tr class="day"><td colspan="${cols}">${dayLabel(d)}</td></tr>`; lastDay = d; }
+    const station = multi ? `<td class="muted">${esc(stationNames[r.station] || r.station)}</td>` : "";
+    body += tab === "plays"
+      ? `<tr><td class="time">${when(r.played_at)}</td>
+           <td class="title">${esc(r.title)}${r.cover ? '<span class="badge">COVER</span>' : ""}</td>
+           <td>${esc(r.artists)}</td>${station}<td class="muted hide-sm">${esc(r.source)}</td></tr>`
+      : `<tr><td class="time">${when(r.played_at)}</td>
+           <td class="title">${esc(r.title)}</td>
+           <td>${esc(r.cover_artist)}</td>
+           <td><span class="vs">original: </span>${esc(r.original_artist)}</td>${station}
+           <td class="muted hide-sm">${esc(r.artist_string)}</td></tr>`;
+  }
+  const more = tab === "plays" && rows.length < state.total
+    ? `<button class="more" id="more">Show more (${state.total - rows.length} ${byTime && sorts[tab].dir === "desc" ? "older" : "more"})</button>` : "";
+  const note = state.q ? `<p class="muted">${state.total} match${state.total === 1 ? "" : "es"}</p>` : "";
+  $("main").innerHTML = `${note}<table><thead>${head}</thead><tbody>${body}</tbody></table>${more}`;
+  if (more) $("more").onclick = () => load(true).catch(showError);
+  bindSort(() => load().catch(showError));
+}
+
+let stationRows = [];
+async function loadStations() {
+  stationRows = (await api("/api/stations")).rows;
+  $("n-stations").textContent = stationRows.length;
+  renderStations();
+}
+
+function renderStations() {
+  const { key, dir } = sorts.stations;
+  const val = (r) => key === "plays" ? r.plays
+    : key === "enabled" ? Number(r.enabled)
+    : key === "last_play" ? (r.last_play || "")
+    : String(r[key] || "").toLowerCase();
+  const rows = [...stationRows].sort((a, b) => {
+    const x = val(a), y = val(b);
+    return (x < y ? -1 : x > y ? 1 : 0) * (dir === "asc" ? 1 : -1);
+  });
+  const list = rows.length ? `<table><thead><tr>${th("enabled", "Scraping")}${th("name", "Station")}${th("siriusxm_id", "SiriusXM id")}
+      ${th("plays", "Songs logged")}${th("last_play", "Last song", "hide-sm")}<th></th></tr></thead><tbody>${
+    rows.map((r) => `<tr class="${r.enabled ? "" : "off"}">
+      <td class="status"><label class="switch"><input type="checkbox" role="switch"
+          data-toggle="${esc(r.slug)}" ${r.enabled ? "checked" : ""}
+          aria-label="Scrape ${esc(r.name)}"><span>${r.enabled ? "On" : "Off"}</span></label></td>
+      <td class="title">${esc(r.name)} <span class="muted">${esc(r.slug)}</span></td>
+      <td>${r.siriusxm_id ? `<code>${esc(r.siriusxm_id)}</code>` : '<span class="muted">none</span>'}</td>
+      <td>${r.plays}</td>
+      <td class="muted hide-sm">${r.last_play ? `${dayLabel(day(r.last_play))}, ${clock(r.last_play)}` : "—"}</td>
+      <td class="actions"><button class="btn" data-fetch="${esc(r.slug)}"
+          data-name="${esc(r.name)}">Fetch now</button><button class="btn danger" data-remove="${esc(r.slug)}"
+          data-name="${esc(r.name)}">Remove</button></td></tr>`).join("")
+  }</tbody></table>` : `<div class="empty">No stations. Add one above.</div>`;
+  $("main").innerHTML = `
+    <div class="panel">
+      <h2>Add a station</h2>
+      <p class="muted">Use the station's name from its xmplaylist address:
+        xmplaylist.com/station/<b>octane</b> → <code>octane</code>. The SiriusXM id is
+        optional; leave it blank to try the same name.</p>
+      <form class="addform" id="addform">
+        <label>xmplaylist station<input name="slug" required placeholder="e.g. octane"
+          autocapitalize="off" autocomplete="off" spellcheck="false"></label>
+        <label>SiriusXM id (optional)<input name="siriusxm_id" placeholder="e.g. hardattack"
+          autocapitalize="off" autocomplete="off" spellcheck="false"></label>
+        <button class="btn primary" type="submit">Add station</button>
+      </form>
+      <div class="msg" id="msg">${stationMsg}</div>
+    </div>
+    ${list}
+    <p class="muted">Removing a station stops new scraping. Songs already logged for it stay.</p>`;
+  stationMsg = "";
+  $("addform").onsubmit = addStation;
+  bindSort(() => {  // keep anything typed in the add form across a re-sort
+    const f = $("addform"), keep = [f.slug.value, f.siriusxm_id.value];
+    stationMsg = $("msg").innerHTML;
+    renderStations();
+    [$("addform").slug.value, $("addform").siriusxm_id.value] = keep;
+  });
+  document.querySelectorAll("[data-remove]").forEach((b) => b.onclick = () => removeStation(b));
+  document.querySelectorAll("[data-fetch]").forEach((b) => b.onclick = () => fetchNow(b));
+  document.querySelectorAll("[data-toggle]").forEach((c) => c.onchange = () => toggleStation(c));
+}
+
+let stationMsg = "";
+async function send(method, path, body) {
+  const r = await fetch(path, { method, headers: { "Content-Type": "application/json" },
+                                body: body ? JSON.stringify(body) : undefined });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || `${r.status}`);
+  return data;
+}
+
+async function addStation(ev) {
+  ev.preventDefault();
+  const f = ev.target, btn = f.querySelector("button");
+  const body = { slug: f.slug.value.trim(), siriusxm_id: f.siriusxm_id.value.trim() };
+  btn.disabled = true; btn.textContent = "Checking…";
+  $("msg").className = "msg"; $("msg").textContent = "";
+  try {
+    const r = await send("POST", "/api/stations", body);
+    stationMsg = `Added ${esc(r.name)} with ${r.stored} recent song${r.stored === 1 ? "" : "s"}` +
+      (r.siriusxm_id ? ` (SiriusXM id <code>${esc(r.siriusxm_id)}</code>).` : ".") +
+      (r.note ? ` <span class="muted">${esc(r.note)}</span>` : "");
+    await loadSummary();
+    await loadStations();
+  } catch (e) {
+    $("msg").className = "msg err"; $("msg").textContent = e.message;
+    btn.disabled = false; btn.textContent = "Add station";
+  }
+}
+
+function stationError(e) {
+  $("msg").className = "msg err"; $("msg").textContent = e.message;
+}
+
+async function toggleStation(box) {
+  box.disabled = true;
+  try {
+    await send("PATCH", `/api/stations/${encodeURIComponent(box.dataset.toggle)}`,
+               { enabled: box.checked });
+    const r = stationRows.find((x) => x.slug === box.dataset.toggle);
+    stationMsg = `${esc(r.name)} ${box.checked ? "will be scraped again" :
+      "is paused. Its songs are kept, and Fetch now still works"}.`;
+    await loadStations();
+  } catch (e) {
+    box.checked = !box.checked; box.disabled = false; stationError(e);
+  }
+}
+
+async function fetchNow(btn) {
+  btn.disabled = true; btn.textContent = "Fetching…";
+  $("msg").className = "msg"; $("msg").textContent = "";
+  try {
+    const r = await send("POST", `/api/stations/${encodeURIComponent(btn.dataset.fetch)}/fetch`, {});
+    const n = r.xmplaylist_new + r.siriusxm_new;
+    stationMsg = `${esc(r.name)}: ${n} new song${n === 1 ? "" : "s"} ` +
+      `(${r.xmplaylist_seen} on xmplaylist).` +
+      (r.now_playing ? ` On air now: ${esc(r.now_playing)}.` : "") +
+      (r.siriusxm_error ? ` <span class="muted">SiriusXM: ${esc(r.siriusxm_error)}</span>` : "");
+    await loadSummary();
+    await loadStations();
+  } catch (e) {
+    btn.disabled = false; btn.textContent = "Fetch now"; stationError(e);
+  }
+}
+
+async function removeStation(btn) {
+  if (btn.dataset.armed !== "1") {
+    btn.dataset.armed = "1"; btn.textContent = `Remove ${btn.dataset.name}?`;
+    setTimeout(() => { if (btn.isConnected) { btn.dataset.armed = ""; btn.textContent = "Remove"; } }, 4000);
+    return;
+  }
+  btn.disabled = true;
+  try {
+    await send("DELETE", `/api/stations/${encodeURIComponent(btn.dataset.remove)}`);
+    stationMsg = `Removed ${esc(btn.dataset.name)}. Its logged songs are kept.`;
+    await loadSummary();
+    await loadStations();
+  } catch (e) {
+    $("msg").className = "msg err"; $("msg").textContent = e.message;
+    btn.disabled = false;
+  }
+}
+
+function showError(e) {
+  $("main").innerHTML = `<div class="empty">Couldn't load data: ${esc(e.message)}</div>`;
+}
+
+document.querySelectorAll(".tab").forEach((b) => b.onclick = () => {
+  state.tab = b.dataset.tab;
+  document.querySelectorAll(".tab").forEach((x) => x.setAttribute("aria-selected", x === b));
+  try { localStorage.setItem("sxm-tab", state.tab); } catch {}
+  load().catch(showError);
+});
+let timer;
+$("q").oninput = () => { clearTimeout(timer); timer = setTimeout(() => {
+  state.q = $("q").value.trim(); load().catch(showError); }, 250); };
+$("station").onchange = () => { state.station = $("station").value; load().catch(showError); };
+
+try {
+  const saved = localStorage.getItem("sxm-tab");
+  if (saved === "covers" || saved === "stations")
+    document.querySelector(`[data-tab="${saved}"]`).click();
+} catch {}
+
+async function refresh() {
+  await loadSummary();
+  // Don't yank the list out from under someone paging back through history,
+  // or reset the Stations tab while someone is typing in its form.
+  if (state.tab === "stations") return;
+  if (state.tab === "covers" || state.rows.length <= 200) await load();
+}
+refresh().catch(showError);
+setInterval(() => { if (!document.hidden) refresh().catch(() => {}); }, 120000);
+</script>
+</body>
+</html>
